@@ -45,6 +45,24 @@
 #define ACPI_SIG_DMAR	"DMAR"	/* DMA Remapping table */
 #define ACPI_SIG_IVRS	"IVRS"	/* I/O Virtualization Reporting Structure table */
 
+#define ACPI_NAME_SIZE		4
+#define ACPI_OEM_ID_SIZE	6
+#define ACPI_OEM_TABLE_ID_SIZE	8
+
+#define ACPI_MAX_BUF		4*4096 /* should be enough room for any ACPI table here */
+
+struct acpi_table_header {
+	char signature[ACPI_NAME_SIZE];	/* ASCII table signature */
+	uint32_t length;		/* Length of table in bytes, including this header */
+	uint8_t revision;		/* ACPI Specification minor version # */
+	uint8_t checksum;		/* To make sum of entire table == 0 */
+	char oem_id[ACPI_OEM_ID_SIZE];	/* ASCII OEM identification */
+	char oem_table_id[ACPI_OEM_TABLE_ID_SIZE];	/* ASCII OEM table identification */
+	uint32_t oem_revision;			/* OEM revision number */
+	char asl_compiler_id[ACPI_NAME_SIZE];	/* ASCII ASL compiler vendor ID */
+	uint32_t asl_compiler_revision;		/* ASL compiler version */
+};
+
 uint8_t *helper_mmap(size_t phys_addr, size_t length);
 void helper_unmmap(uint8_t *addr, size_t length);
 int helper_efi_locate(const char *efi_entry, uint32_t length, size_t *location);
@@ -53,5 +71,8 @@ int acpi_get_table(const char *sig, uint8_t *buf, uint32_t length);
 
 void decode_dmar_table(void);
 void decode_dmar_table_file(const char *file);
+
+void decode_ivrs_table(void);
+void decode_ivrs_table_file(const char *file);
 
 #endif /* __DEFS_H__ */

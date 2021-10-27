@@ -1,5 +1,5 @@
 /*
- * main.c:
+ * ivrs.c: Routines to scan and print IVRS table.
  *
  * Copyright (c) 2021, Oracle and/or its affiliates.
  *
@@ -34,68 +34,80 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
+#include <string.h>
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include "defs.h"
 
-static struct option long_options[] = {
-	{"dmar", no_argument, 0, 'd'},
-	{"dmar-file", required_argument, 0, 'D'},
-	{"ivrs", no_argument, 0, 'i'},
-	{"ivrs-file", required_argument, 0, 'I'},
-	{"help", no_argument, 0, 'h'},
-	{0, 0, 0, 0}
-};
-
-static void
-usage(void)
+void
+decode_ivrs_table(void)
 {
-	printf("Usage:\n");
-	printf("-d, --dmar               read Intel DMAR ACPI table from memory and decode\n");
-	printf("-D, --dmar-file <file>   read Intel DMAR ACPI table from file and decode\n");
-	printf("-i, --ivrs               read AMD IVRS ACPI table from memory and decode\n");
-	printf("-I, --ivrs-file <file>   read AMD IVRS ACPI table from file and decode\n");
-	printf("-h, --help               prints this message\n");
+	struct acpi_table_header *table = NULL;
+	int rc;
+
+	printf("IVRS decode utility - reading memory\n");
+
+	table = (struct acpi_table_header *)malloc(ACPI_MAX_BUF);
+	if (!table) {
+		printf("Allocation failure\n");
+		goto done;
+	}
+
+	/* read the local host's ACPI tables */
+	rc = acpi_get_table(ACPI_SIG_DMAR, (uint8_t*)table, ACPI_MAX_BUF);
+	if (rc != 0) {
+		printf("Failed to read host IVRS\n");
+		goto done;
+	}
+
+	/* TODO acpi_parse_dmar(table);*/
+
+done:
+	if (table != NULL)
+		free(table);
 }
 
-int
-main(int argc, char *argv[])
+void
+decode_ivrs_table_file(const char *file)
 {
-	int c;
-	int option_index = 0;
+	struct acpi_table_header *table = NULL;
+	FILE *infile = NULL;
+	struct stat instat;
+	size_t rd;
 
-	if (argc <= 1) {
-		usage();
+	if (stat(file, &instat) != 0) {
+		printf("Stat failed for %s\n", file);
 		exit(-1);
 	}
 
-	for ( ; ; ) {
-		c = getopt_long(argc, argv, "dD:iI:h", long_options, &option_index);
-		if ( c == -1 )
-			break;
+	printf("IVRS decode utility - reading input file IVRS: %s size: %d\n",
+	       file, (int)instat.st_size);
 
-		switch (c) {
-		case 'd':
-			decode_dmar_table();
-			break;
-		case 'D':
-			decode_dmar_table_file(optarg);
-			break;
-		case 'i':
-			decode_ivrs_table();
-			break;
-		case 'I':
-			decode_ivrs_table_file(optarg);
-			break;
-		case 'h':
-			usage();
-			break;
-		case '?':
-			usage();
-			break;
-		default:
-			abort();
-		}
+	table = (struct acpi_table_header *)malloc((size_t)instat.st_size);
+	if (!table) {
+		printf("Allocation failure\n");
+		goto done;
 	}
 
-	return 0;
+	infile = fopen(file, "rb");
+	if (!infile) {
+		printf("Could not open %s\n", file);
+		goto done;
+	}
+
+	rd = fread(table, 1, (size_t)instat.st_size, infile);
+	if (rd != (size_t)instat.st_size) {
+		printf("Failure - only read %d\n", (int)rd);
+		goto done;
+	}
+
+	/* TOOD acpi_parse_ivrs(table);*/
+
+done:
+	if (table != NULL)
+		free(table);
+	if (infile != NULL)
+		fclose(infile);
 }

@@ -41,10 +41,6 @@
 #include <unistd.h>
 #include "defs.h"
 
-#define ACPI_NAME_SIZE		4
-#define ACPI_OEM_ID_SIZE	6
-#define ACPI_OEM_TABLE_ID_SIZE	8
-
 #define BITS_PER_LONG		32
 #define BITS_TO_LONGS(bits) \
 	(((bits)+BITS_PER_LONG-1)/BITS_PER_LONG)
@@ -53,8 +49,6 @@
 
 #define MIN_SCOPE_LEN (sizeof(struct acpi_pci_path) + \
 	sizeof(struct acpi_dev_scope))
-
-#define DMAR_MAX_BUF		4096 /* should be enough room for any DMAR */
 
 #define DRHD_FLAGS_INCLUDE_ALL	0x1       /* drhd remaps remaining devices */
 
@@ -86,18 +80,6 @@ enum acpi_dev_scope_type {
 	ACPI_DEV_IOAPIC,	/* IOAPIC device*/
 	ACPI_DEV_MSI_HPET,	/* MSI capable HPET*/
 	ACPI_DEV_ENTRY_COUNT
-};
-
-struct acpi_table_header {
-	char signature[ACPI_NAME_SIZE];	/* ASCII table signature */
-	uint32_t length;		/* Length of table in bytes, including this header */
-	uint8_t revision;		/* ACPI Specification minor version # */
-	uint8_t checksum;		/* To make sum of entire table == 0 */
-	char oem_id[ACPI_OEM_ID_SIZE];	/* ASCII OEM identification */
-	char oem_table_id[ACPI_OEM_TABLE_ID_SIZE];	/* ASCII OEM table identification */
-	uint32_t oem_revision;			/* OEM revision number */
-	char asl_compiler_id[ACPI_NAME_SIZE];	/* ASCII ASL compiler vendor ID */
-	uint32_t asl_compiler_revision;		/* ASL compiler version */
 };
 
 struct acpi_table_dmar {
@@ -397,16 +379,16 @@ decode_dmar_table(void)
 	struct acpi_table_header *table = NULL;
 	int rc;
 
-	printf("DMAR dump utility - reading memory\n");
+	printf("DMAR decode utility - reading memory\n");
 
-	table = (struct acpi_table_header *)malloc(DMAR_MAX_BUF);
+	table = (struct acpi_table_header *)malloc(ACPI_MAX_BUF);
 	if (!table) {
 		printf("Allocation failure\n");
 		goto done;
 	}
 
 	/* read the local host's ACPI tables */
-	rc = acpi_get_table(ACPI_SIG_DMAR, (uint8_t*)table, DMAR_MAX_BUF);
+	rc = acpi_get_table(ACPI_SIG_DMAR, (uint8_t*)table, ACPI_MAX_BUF);
 	if (rc != 0) {
 		printf("Failed to read host DMAR\n");
 		goto done;
@@ -432,7 +414,7 @@ decode_dmar_table_file(const char *file)
 		exit(-1);
 	}
 
-	printf("DMAR dump utility - reading input file DMAR: %s size: %d\n",
+	printf("DMAR decode utility - reading input file DMAR: %s size: %d\n",
 	       file, (int)instat.st_size);
 
 	table = (struct acpi_table_header *)malloc((size_t)instat.st_size);

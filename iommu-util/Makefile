@@ -1,5 +1,5 @@
 PROG=	iommu-util
-SRCS=	main.c dmar.c acpi_decode.c utils.c
+SRCS=	main.c dmar.c ivrs.c acpi_decode.c utils.c
 
 CFLAGS+= -Wall -O2 -D_LINUX -Wstrict-prototypes
 
