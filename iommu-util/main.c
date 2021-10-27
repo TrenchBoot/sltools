@@ -1,7 +1,7 @@
 /*
- * acpi_decode.c: Definitions for dmardump utility.
+ * main.c:
  *
- * Copyright (c) 2020, Ross Philipson ross.philipson@gmail.com
+ * Copyright (c) 2021, Oracle and/or its affiliates.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,27 +31,71 @@
  * OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __DEFS_H__
-#define __DEFS_H__
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <getopt.h>
+#include "defs.h"
 
-#if __WORDSIZE == 64
-#define INT_FMT "%ld"
-#define UINT_FMT "%lx"
-#else
-#define INT_FMT "%d"
-#define UINT_FMT "%x"
-#endif
+static struct option long_options[] = {
+	{"dmar", no_argument, 0, 'd'},
+	{"dmar-file", required_argument, 0, 'D'},
+	{"ivrs", no_argument, 0, 'i'},
+	{"ivrs-file", required_argument, 0, 'I'},
+	{"help", no_argument, 0, 'h'},
+	{0, 0, 0, 0}
+};
 
-#define ACPI_SIG_DMAR	"DMAR"	/* DMA Remapping table */
-#define ACPI_SIG_IVRS	"IVRS"	/* I/O Virtualization Reporting Structure table */
+static void
+usage(void)
+{
+	printf("Usage:\n");
+	printf("-d, --dmar               read Intel DMAR ACPI table from memory and decode\n");
+	printf("-D, --dmar-file <file>   read Intel DMAR ACPI table from file and decode\n");
+	printf("-i, --ivrs               read AMD IVRS ACPI table from memory and decode\n");
+	printf("-I, --ivrs-file <file>   read AMD IVRS ACPI table from file and decode\n");
+	printf("-h, --help               prints this message\n");
+}
 
-uint8_t *helper_mmap(size_t phys_addr, size_t length);
-void helper_unmmap(uint8_t *addr, size_t length);
-int helper_efi_locate(const char *efi_entry, uint32_t length, size_t *location);
+int
+main(int argc, char *argv[])
+{
+	int c;
+	int option_index = 0;
 
-int acpi_get_table(const char *sig, uint8_t *buf, uint32_t length);
+	if (argc <= 1) {
+		usage();
+		exit(-1);
+	}
 
-void decode_dmar_table(void);
-void decode_dmar_table_file(const char *file);
+	for ( ; ; ) {
+		c = getopt_long(argc, argv, "dD:iI:h", long_options, &option_index);
+		if ( c == -1 )
+			break;
 
-#endif /* __DEFS_H__ */
+		switch (c) {
+		case 'd':
+			decode_dmar_table();
+			break;
+		case 'D':
+			decode_dmar_table_file(optarg);
+			break;
+		case 'i':
+			/* TODO */
+			break;
+		case 'I':
+			/* TODO */
+			break;
+		case 'h':
+			usage();
+			break;
+		case '?':
+			usage();
+			break;
+		default:
+			abort();
+		}
+	}
+
+	return 0;
+}

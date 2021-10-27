@@ -392,69 +392,65 @@ acpi_parse_dmar(struct acpi_table_header *table)
 }
 
 void
-usage(void)
+decode_dmar_table(void)
 {
-	printf ("Usage: dmardump [input_file]\n");
-	printf ("          [input_file] - binary DMAR table dump\n\n");
-	printf (" If a file is specified, dmardump loads and formats the DMAR table\n");
-	printf (" in the file. If no file is specified, dmardump will read the DMAR table from\n");
-	printf (" the current host's ACPI tables and report it.\n\n");
-}
-
-int
-main(int argc, char *argv[])
-{
-	FILE *infile = NULL;
-	struct stat instat;
 	struct acpi_table_header *table = NULL;
-	size_t rd;
 	int rc;
 
-	if ((argc == 2)&&(strcmp(argv[1], "--help") == 0)) {
-		usage();
-		return 0;
+	printf("DMAR dump utility - reading memory\n");
+
+	table = (struct acpi_table_header *)malloc(DMAR_MAX_BUF);
+	if (!table) {
+		printf("Allocation failure\n");
+		goto done;
 	}
 
-	if (argc > 1) {
-		if (stat(argv[1], &instat) != 0) {
-			printf("Stat failed for %s\n", argv[1]);
-			return 0;
-		}
+	/* read the local host's ACPI tables */
+	rc = acpi_get_table(ACPI_SIG_DMAR, (uint8_t*)table, DMAR_MAX_BUF);
+	if (rc != 0) {
+		printf("Failed to read host DMAR\n");
+		goto done;
+	}
 
-		printf("DMAR dump utility - reading input file DMAR: %s size: %d\n", argv[1], (int)instat.st_size);
+	acpi_parse_dmar(table);
 
-		table = (struct acpi_table_header *)malloc((size_t)instat.st_size);
-		if (!table) {
-			printf("Allocation failure\n");
-			goto done;
-		}
+done:
+	if (table != NULL)
+		free(table);
+}
 
-		infile = fopen(argv[1], "rb");
-		if (!infile) {
-			printf("Could not open %s\n", argv[1]);
-			goto done;
-		}
+void
+decode_dmar_table_file(const char *file)
+{
+	struct acpi_table_header *table = NULL;
+	FILE *infile = NULL;
+	struct stat instat;
+	size_t rd;
 
-		rd = fread(table, 1, (size_t)instat.st_size, infile);
-		if (rd != (size_t)instat.st_size) {
-			printf("Failure - only read %d\n", (int)rd);
-			goto done;
-		}
-	} else {
-		printf("DMAR dump utility - reading memory\n");
+	if (stat(file, &instat) != 0) {
+		printf("Stat failed for %s\n", file);
+		exit(-1);
+	}
 
-		table = (struct acpi_table_header *)malloc(DMAR_MAX_BUF);
-		if (!table) {
-			printf("Allocation failure\n");
-			goto done;
-		}
+	printf("DMAR dump utility - reading input file DMAR: %s size: %d\n",
+	       file, (int)instat.st_size);
 
-		/* read the local host's ACPI tables */
-		rc = acpi_get_table(ACPI_SIG_DMAR, (uint8_t*)table, DMAR_MAX_BUF);
-		if (rc != 0) {
-			printf("Failed to read host DMAR\n");
-			goto done;
-		}
+	table = (struct acpi_table_header *)malloc((size_t)instat.st_size);
+	if (!table) {
+		printf("Allocation failure\n");
+		goto done;
+	}
+
+	infile = fopen(file, "rb");
+	if (!infile) {
+		printf("Could not open %s\n", file);
+		goto done;
+	}
+
+	rd = fread(table, 1, (size_t)instat.st_size, infile);
+	if (rd != (size_t)instat.st_size) {
+		printf("Failure - only read %d\n", (int)rd);
+		goto done;
 	}
 
 	acpi_parse_dmar(table);
@@ -464,6 +460,4 @@ done:
 		free(table);
 	if (infile != NULL)
 		fclose(infile);
-
-	return 0;
 }
