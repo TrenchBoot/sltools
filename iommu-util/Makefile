@@ -1,5 +1,5 @@
-PROG=	dmardump
-SRCS=	dmardump.c acpi_decode.c utils.c
+PROG=	iommu-util
+SRCS=	dmar.c acpi_decode.c utils.c
 
 CFLAGS+= -Wall -O2 -D_LINUX -Wstrict-prototypes
 
