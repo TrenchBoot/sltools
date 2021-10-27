@@ -43,11 +43,12 @@
 #endif
 
 #define ACPI_SIG_DMAR	"DMAR"	/* DMA Remapping table */
+#define ACPI_SIG_IVRS	"IVRS"	/* I/O Virtualization Reporting Structure table */
 
 uint8_t *helper_mmap(size_t phys_addr, size_t length);
 void helper_unmmap(uint8_t *addr, size_t length);
 int helper_efi_locate(const char *efi_entry, uint32_t length, size_t *location);
 
-int acpi_get_dmar(uint8_t *dmar_buf, uint32_t length);
+int acpi_get_table(const char *sig, uint8_t *buf, uint32_t length);
 
 #endif /* __DEFS_H__ */

@@ -304,28 +304,29 @@ static int locate_xsdt_acpi_table(struct acpi_rsdp_info *rsdpinfo, const char *s
 	return rc;
 }
 
-static int decode_acpi_tables(struct acpi_rsdp_info *rsdpinfo, uint8_t *dmar_buf, uint32_t length)
+static int decode_acpi_tables(struct acpi_rsdp_info *rsdpinfo, const char *sig,
+			      uint8_t *buf, uint32_t length)
 {
 	int rc = 0;
 	struct acpi_table_info ti = {0};
 
-	/* locate the DMAR - use XSDT if present */
+	/* locate the requested table - use XSDT if present */
 	if (!rsdpinfo->is_rev1)
-		rc = locate_xsdt_acpi_table(rsdpinfo, ACPI_SIG_DMAR, &ti);
+		rc = locate_xsdt_acpi_table(rsdpinfo, sig, &ti);
 	else
-		rc = locate_rsdt_acpi_table(rsdpinfo, ACPI_SIG_DMAR, &ti);
+		rc = locate_rsdt_acpi_table(rsdpinfo, sig, &ti);
 
 	if (rc != 0) {
-		printf("%s: failed to locate %s table\n", ACPI_ERROR, ACPI_SIG_DMAR);
+		printf("%s: failed to locate %s table\n", ACPI_ERROR, sig);
 		return rc;
 	}
 
 	if (ti.length <= length) {
 		/* If we got it, copy it over */
-		memcpy(dmar_buf, ti.addr, ti.length);
+		memcpy(buf, ti.addr, ti.length);
 	} else {
 		printf("%s: cannot copy %s table length=%x - out of space\n",
-			ACPI_ERROR, ACPI_SIG_DMAR, ti.length);
+			ACPI_ERROR, sig, ti.length);
 		rc = -1;
 	}
 
@@ -333,7 +334,7 @@ static int decode_acpi_tables(struct acpi_rsdp_info *rsdpinfo, uint8_t *dmar_buf
 	return rc;
 }
 
-int acpi_get_dmar(uint8_t *dmar_buf, uint32_t length)
+int acpi_get_table(const char *sig, uint8_t *buf, uint32_t length)
 {
 	struct acpi_rsdp_info rsdpinfo;
 	int rc;
@@ -346,7 +347,7 @@ int acpi_get_dmar(uint8_t *dmar_buf, uint32_t length)
 	}
 
 	/* process the ACPI tables */
-	rc = decode_acpi_tables(&rsdpinfo, dmar_buf, length);
+	rc = decode_acpi_tables(&rsdpinfo, sig, buf, length);
 
 	/* cleanup */
 	helper_unmmap(rsdpinfo.rsdt_addr, rsdpinfo.rsdt_length);

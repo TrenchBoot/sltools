@@ -1,5 +1,5 @@
 /*
- * acpi_decode.c: Routines to scan and print DMAR table.
+ * dmar.c: Routines to scan and print DMAR table.
  *
  * Copyright (c) 2020, Ross Philipson ross.philipson@gmail.com
  *
@@ -450,7 +450,7 @@ main(int argc, char *argv[])
 		}
 
 		/* read the local host's ACPI tables */
-		rc = acpi_get_dmar((uint8_t*)table, DMAR_MAX_BUF);
+		rc = acpi_get_table(ACPI_SIG_DMAR, (uint8_t*)table, DMAR_MAX_BUF);
 		if (rc != 0) {
 			printf("Failed to read host DMAR\n");
 			goto done;
