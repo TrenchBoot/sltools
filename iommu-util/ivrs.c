@@ -77,7 +77,7 @@ struct ivrs_ivdb_common {
 #define IVHD_TYPE_11H	0x11
 #define IVHD_TYPE_40H	0x40
 
-struct ivrs_ivhd_header {
+struct ivrs_ivhd {
 	struct ivrs_ivdb_common ivdb;
 	uint16_t devid;
 	uint16_t cap_offset;
@@ -96,9 +96,9 @@ struct ivrs_ivhd_11_40 {
 
 #define IVMD_TYPE_ALL_PERIPHERALS	0x20
 #define IVMD_TYPE_SPECIFIED_PERIPHERAL	0x21
-#define IVMD_TYPE_PERIPHERALS_RANGE	0x22
+#define IVMD_TYPE_PERIPHERAL_RANGE	0x22
 
-struct ivrs_ivmd_header {
+struct ivrs_ivmd {
 	struct ivrs_ivdb_common ivdb;
 	uint16_t devid;
 	uint16_t aux_data;
@@ -128,6 +128,42 @@ acpi_parse_one_ivhd(struct ivrs_ivdb_common *ivdb)
 static void
 acpi_parse_one_ivmd(struct ivrs_ivdb_common *ivdb)
 {
+	struct ivrs_ivmd *ivmd = (struct ivrs_ivmd *)ivdb;
+	struct ivmd_flags flags;
+
+	printf("Device ID:         0x%4.4x\n", ivmd->devid);
+	printf("Auxilary Data:     0x%4.4x\n", ivmd->aux_data);
+	printf("Reserved:          0x%lx\n", ivmd->reserved);
+	printf("Start Address:     0x%lx\n", ivmd->start_addr);
+	printf("Mem Block Length:  0x%lx\n", ivmd->mem_block_length);
+
+	printf("IVMD Type Specific:\n");
+	switch (ivmd->ivdb.type) {
+	case IVMD_TYPE_ALL_PERIPHERALS:
+		printf("  IVMD Type All Peripherals\n");
+		printf("  Device ID Reserved\n");
+		printf("  Auxiliary Data Reserved\n");
+		break;
+	case IVMD_TYPE_SPECIFIED_PERIPHERAL:
+		printf("  IVMD Type Specified Peripherals\n");
+		printf("  Specified Device ID\n");
+		printf("  Auxiliary Data Reserved\n");
+		break;
+	case IVMD_TYPE_PERIPHERAL_RANGE:
+		printf("  IVMD Type Peripheral Range\n");
+		printf("  Starting Device ID of Range\n");
+		printf("  Auxiliary Data Ending Device ID of Range\n");
+	};
+
+	flags.val = ivdb->flags;
+	printf("  IVMD Flags\n");
+	printf("  ---------------------------------\n");
+	printf("    Unity:            0x%1.1x\n", flags.unity);
+	printf("    IR:               0x%1.1x\n", flags.ir);
+	printf("    IW:               0x%1.1x\n", flags.iw);
+	printf("    Exclusion Range:  0x%1.1x\n", flags.excl_range);
+	printf("    Reserved:         0x%1.1x\n", flags.reserved);
+	printf("  ---------------------------------\n");
 }
 
 static void
@@ -163,12 +199,12 @@ acpi_parse_ivrs(struct acpi_table_header *table)
 	printf("  ------------------------------------------------\n");
 	printf("   EFRSup:          0x%1.1x\n", info.efr_sup);
 	printf("   DMA Remap Sup:   0x%1.1x\n", info.dma_remap_sup);
-	printf("   Reserved:        0x%3.3x\n", info.reserved1);
-	printf("   GVA Size:        0x%3.3x\n", info.gva_size);
-	printf("   PA Size:         0x%7.7x\n", info.pa_size);
-	printf("   VA Size:         0x%7.7x\n", info.va_size);
+	printf("   Reserved:        0x%1.1x\n", info.reserved1);
+	printf("   GVA Size:        0x%1.1x\n", info.gva_size);
+	printf("   PA Size:         0x%2.2x\n", info.pa_size);
+	printf("   VA Size:         0x%2.2x\n", info.va_size);
 	printf("   HtAtsResv:       0x%1.1x\n", info.ht_ats_resv);
-	printf("   Reserved:        0x%9.9x\n", info.reserved2);
+	printf("   Reserved:        0x%3.3x\n", info.reserved2);
 	printf("  ------------------------------------------------\n");
 
 	ivdb = (struct ivrs_ivdb_common *)(ivrs + 1);
@@ -190,7 +226,7 @@ acpi_parse_ivrs(struct acpi_table_header *table)
 			break;
 		case IVMD_TYPE_ALL_PERIPHERALS:
 		case IVMD_TYPE_SPECIFIED_PERIPHERAL:
-		case IVMD_TYPE_PERIPHERALS_RANGE:
+		case IVMD_TYPE_PERIPHERAL_RANGE:
 			printf("I/O Virtualization Memory Definition (IVMD) Structure #%d\n", j++);
 			printf("Type:           0x%2.2x\n", ivdb->type);
 			printf("Flags:          0x%2.2x\n", ivdb->flags);
