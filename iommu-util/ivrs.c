@@ -85,13 +85,26 @@ struct ivrs_ivhd {
 	uint16_t pci_seg;
 	uint16_t iommu_info;
 	uint32_t feature_info;
-	/* Type 10: device entries */
-	/* Type 11/40: ivrs_ivhd_11_40 ... device entries */
+	/* Type 10 device entries */
+	uint64_t efr_image;	/* Types 11h/40h only */
+	uint64_t efr_image2;
+	/* Type 11/40 device entries */
 } __attribute__((packed));
 
-struct ivrs_ivhd_11_40 {
-	uint64_t efr_info;	/* Types 11h/40h only */
-	uint64_t reserved;
+struct ivhd_flags {
+	union {
+		uint8_t val;
+		struct {
+			uint8_t ht_tun_en:1;
+			uint8_t pass_pw:1;
+			uint8_t res_pass_pw:1;
+			uint8_t isoc:1;
+			uint8_t iotlb_sup:1;
+			uint8_t coherent:1;
+			uint8_t pre_f_sup:1; /* reserved for 11/40 */
+			uint8_t ppr_sup:1;   /* reserved for 11/40 */
+		};
+	};
 } __attribute__((packed));
 
 #define IVMD_TYPE_ALL_PERIPHERALS	0x20
@@ -123,6 +136,36 @@ struct ivmd_flags {
 static void
 acpi_parse_one_ivhd(struct ivrs_ivdb_common *ivdb)
 {
+	struct ivrs_ivhd *ivhd = (struct ivrs_ivhd *)ivdb;
+	struct ivhd_flags flags;
+
+	printf("Device ID:            0x%4.4x\n", ivhd->devid);
+	printf("Capabilities Offset:  0x%4.4x\n", ivhd->cap_offset);
+	printf("Base Address:         0x%lx\n", ivhd->base_addr);
+	printf("PCI Segment:          0x%4.4x\n", ivhd->pci_seg);
+	printf("IOMMU Info:           0x%4.4x\n", ivhd->iommu_info);
+	printf("Feature Info:         0x%8.8x\n", ivhd->feature_info);
+	if (ivdb->type > IVHD_TYPE_10H) {
+		printf("EFR Register Image:   0x%lx\n", ivhd->efr_image);
+		printf("EFR Register Image 2: 0x%lx\n", ivhd->efr_image2);
+	}
+
+	printf("\n");
+
+	flags.val = ivdb->flags;
+	printf("  IVHD Flags\n");
+	printf("  ---------------------------------\n");
+	printf("    HtTunEn:          0x%1.1x\n", flags.ht_tun_en);
+	printf("    PassPw:           0x%1.1x\n", flags.pass_pw);
+	printf("    ResPassPw:        0x%1.1x\n", flags.res_pass_pw);
+	printf("    Isoc:             0x%1.1x\n", flags.isoc);
+	printf("    IotlbSup:         0x%1.1x\n", flags.iotlb_sup);
+	printf("    Coherent:         0x%1.1x\n", flags.coherent);
+	if (ivdb->type == IVHD_TYPE_10H) {
+		printf("    PreFSup:          0x%1.1x\n", flags.pre_f_sup);
+		printf("    PPRSup:           0x%1.1x\n", flags.ppr_sup);
+	}
+	printf("  ---------------------------------\n");
 }
 
 static void
@@ -213,14 +256,15 @@ acpi_parse_ivrs(struct acpi_table_header *table)
 
 	while ( ((unsigned long)ivdb) <
 		(((unsigned long)ivrs) + table->length) ) {
-		switch ( ivdb->type ) {
+		switch (ivdb->type) {
 		case IVHD_TYPE_10H:
 		case IVHD_TYPE_11H:
 		case IVHD_TYPE_40H:
 			printf("I/O Virtualization Hardware Definition (IVHD) Structure #%d\n", i++);
-			printf("Type:           0x%2.2x\n", ivdb->type);
-			printf("Flags:          0x%2.2x\n", ivdb->flags);
-			printf("Length:         0x%4.4x\n", ivdb->length);
+			printf("-----------------------------------------------------------\n");
+			printf("Type:                 0x%2.2x\n", ivdb->type);
+			printf("Flags:                0x%2.2x\n", ivdb->flags);
+			printf("Length:               0x%4.4x\n", ivdb->length);
 			acpi_parse_one_ivhd(ivdb);
 			printf("\n");
 			break;
@@ -228,6 +272,7 @@ acpi_parse_ivrs(struct acpi_table_header *table)
 		case IVMD_TYPE_SPECIFIED_PERIPHERAL:
 		case IVMD_TYPE_PERIPHERAL_RANGE:
 			printf("I/O Virtualization Memory Definition (IVMD) Structure #%d\n", j++);
+			printf("---------------------------------------------------------\n");
 			printf("Type:           0x%2.2x\n", ivdb->type);
 			printf("Flags:          0x%2.2x\n", ivdb->flags);
 			printf("Length:         0x%4.4x\n", ivdb->length);
@@ -236,6 +281,7 @@ acpi_parse_ivrs(struct acpi_table_header *table)
 			break;
 		default:
 			printf("Unknown Reporting Structure #%d\n", k++);
+			printf("-------------------------------\n");
 			printf("Type:           0x%2.2x\n", ivdb->type);
 			printf("Flags:          0x%2.2x\n", ivdb->flags);
 			printf("Length:         0x%4.4x\n", ivdb->length);
